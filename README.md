@@ -5,12 +5,6 @@
 * Load in Data
 * Conduct Hypothesis Testing
 
-# Questions
-* what is an appropriate value or a pvalue? 
-* what is the use of using pvalues?
-* what is the `np.random.seed(N)`
-    * replication within randomness
-
 # Objectives
 YWBAT
 - conduct a 1 samp and 2 samp ttest using scipy.stats
@@ -304,7 +298,114 @@ print(iris.DESCR)
        - Many, many more ...
 
 
-# Q1. Is the sepal length different between virginica and versicolor iris flowers?
+
+```python
+df.head()
+```
+
+
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>sepal length (cm)</th>
+      <th>sepal width (cm)</th>
+      <th>petal length (cm)</th>
+      <th>petal width (cm)</th>
+      <th>target</th>
+      <th>target_names</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>0</td>
+      <td>5.1</td>
+      <td>3.5</td>
+      <td>1.4</td>
+      <td>0.2</td>
+      <td>0</td>
+      <td>setosa</td>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td>4.9</td>
+      <td>3.0</td>
+      <td>1.4</td>
+      <td>0.2</td>
+      <td>0</td>
+      <td>setosa</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>4.7</td>
+      <td>3.2</td>
+      <td>1.3</td>
+      <td>0.2</td>
+      <td>0</td>
+      <td>setosa</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>4.6</td>
+      <td>3.1</td>
+      <td>1.5</td>
+      <td>0.2</td>
+      <td>0</td>
+      <td>setosa</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>5.0</td>
+      <td>3.6</td>
+      <td>1.4</td>
+      <td>0.2</td>
+      <td>0</td>
+      <td>setosa</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+
+
+```python
+# pandas scattermatrix
+pd.plotting.scatter_matrix(df, figsize=(12, 12))
+plt.show()
+```
+
+
+![png](hypothesis-testing_files/hypothesis-testing_12_0.png)
+
+
+
+```python
+sns.pairplot(df, hue='target_names', corner=True)
+plt.show()
+```
+
+
+![png](hypothesis-testing_files/hypothesis-testing_13_0.png)
+
+
+# Q1. Is the mean sepal length different between virginica and versicolor iris flowers?
 
 * get data
 * ensure it's normal
@@ -315,13 +416,199 @@ print(iris.DESCR)
 
 
 ```python
+sl_virg = df.loc[df['target_names']=='virginica', 'sepal length (cm)']
+sl_vers = df.loc[df['target_names']=='versicolor', 'sepal length (cm)']
+```
+
+## what kind of test do we need to compare 2 populations? 
+* 2 sample ttest
+
+## what are the assumptions of a 2 sample ttest?
+* data is continuous - yes
+* data follows normal distribution - we need to test
+* variances are equal (otherwise you have to run a different ttest) - we need to test
+* independent - yes
+* sample things correctly and randomly - yes
+
+
+## what is the null and alternative hypothesis of a 2 sample ttest
+* H0: $\mu_\text{virginica} = \mu_\text{versicolor}$
+* HA: $\mu_\text{virginica} \neq \mu_\text{versicolor}$
+
+* H0: mu_virginica = mu_versicolor
+* HA: mu_virginica != mu_versicolor
+
+
+# step 1: test for normality
+
+
+```python
+sl_virg.shape, sl_vers.shape
+```
+
+
+
+
+    ((50,), (50,))
+
+
+
+
+```python
+# if i'm testing the means, I don't care about the populations
+# what should I be taking
+sample_mus_virginica = []
+sample_mus_versicolor = []
+for i in range(30):
+    virgSamp = np.random.choice(sl_virg, size=50, replace=True).mean()
+    versSamp = np.random.choice(sl_vers, size=50, replace=True).mean()
+    sample_mus_virginica.append(virgSamp)
+    sample_mus_versicolor.append(versSamp)
+```
+
+
+```python
+# test each sample for normality using shapiro
+# h0: data was drawn from a normal distribution 
+# ha: data was not drawn from a normal distribution
+# if p<0.05 reject the null otherwise
+# p >= 0.05 fail to reject the null
+t1, p1 = scs.shapiro(sample_mus_virginica)
+t2, p2 = scs.shapiro(sample_mus_versicolor)
+
+print(p1)
+print(p2)
+
+# since p > 0.05 in both cases we fail to reject that the data is normal
+# therefore we can assume that our data is normal
+```
+
+    0.2866269648075104
+    0.3906897008419037
+
+
+
+```python
+# test for equal variances using a levene test
+# h0: samples are from populations with equal variances
+# ha: samples are not from populations with equal variances
+
+t, p = scs.levene(sample_mus_virginica, sample_mus_versicolor)
+p
+# since p>0.05 we fail to reject that the variances are equal
+# therefore we can assume that our variances are equal
+```
+
+
+
+
+    0.7144632773343726
+
+
+
+
+```python
+# Now that our assumptions are met we can actually do a ttest
+```
+
+
+```python
+# h0: mu_virginica = mu_versicolor
+# ha: mu_virginica != mu_versicolor
+t, p = scs.ttest_ind(sample_mus_virginica, sample_mus_versicolor, equal_var=False)
+p
+```
+
+
+
+
+    3.576429102305599e-42
+
+
+
+## Initial Findings
+After doing a sampling distribution of the mean and running a welch's ttest one can conclude that the mean sample length of each group is different. 
+
+## Next Steps: Now let's measure how different these means are
+
+
+```python
+# how do we measure difference of means? 
+# power analysis
+```
+
+
+```python
+def cohen_d(x,y):
+    nx = len(x)
+    ny = len(y)
+    dof = nx + ny - 2
+    return np.abs(np.mean(x) - np.mean(y)) / np.sqrt(((nx-1)*np.std(x, ddof=1) ** 2 + (ny-1)*np.std(y, ddof=1) ** 2) / dof)
 
 ```
 
 
 ```python
-
+effect_size = cohen_d(sample_mus_virginica, sample_mus_versicolor)
+effect_size
 ```
+
+
+
+
+    9.646166197224769
+
+
+
+
+```python
+from statsmodels.stats.power import TTestIndPower
+```
+
+
+```python
+analysis = TTestIndPower()
+```
+
+
+```python
+result = analysis.solve_power(effect_size=effect_size, nobs1=30, alpha=0.05)
+result
+```
+
+
+
+
+    1.0
+
+
+
+
+```python
+type2error_rate = 1 - result
+type2error_rate
+```
+
+
+
+
+    0.0
+
+
+
+# How do we interpret this? 
+if you take a sample of versicolors or virginicas and measure the mean sepal length I can tell you with 100% certainity where the flowers came from.
+
+
+```python
+plt.hist(sample_mus_virginica, color='green', alpha=0.8)
+plt.hist(sample_mus_versicolor, color='orange', alpha=0.8)
+plt.show()
+```
+
+
+![png](hypothesis-testing_files/hypothesis-testing_34_0.png)
+
 
 # Q2 Is the petal length different among any of the iris flowers (anova)
 
@@ -424,6 +711,14 @@ for col in df.columns[:4]:
 
 
 # What did we learn today?
+* don't only eyeball normality
+* shapiro and levene test
+* pairplots are awesome and very useful for data viz
+* power analysis
+    * you'll always have 3 of 4 and it will always solve for the 4th
+* input into the scatter matrix 
+* cohen's d to measure the effect size 
+* alpha=0.05 because it's standard
 
 
 ```python
